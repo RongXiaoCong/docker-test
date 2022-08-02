@@ -21,6 +21,7 @@ function deleteFolderRecursive (path) {
 
 const resolvePost = req =>
   new Promise(resolve => {
+    let chunk="";
     req.on('data', data => {
       chunk += data
     })
