@@ -1,27 +1,26 @@
 const http = require('http')
 const {execSync} = require('child_process')
-const path = require('path')
 const fs = require('fs')
+const path = require('path')
 
 // 递归删除目录
 function deleteFolderRecursive (path) {
   if (fs.existsSync(path)) {
     fs.readdirSync(path).forEach(function (file) {
-        const curPath = path + '/' + file
-        if (fs.stateSync(curPath).isDirectory()) {
-          deleteFolderRecursive(curPath)
-        } else {
-          fs.unlinkSync(curPath)
-        }
+      const curPath = path + '/' + file
+      if (fs.statSync(curPath).isDirectory()) { // recurse
+        deleteFolderRecursive(curPath)
+      } else { // delete file
+        fs.unlinkSync(curPath)
       }
-    )
+    })
     fs.rmdirSync(path)
   }
 }
 
 const resolvePost = req =>
   new Promise(resolve => {
-    let chunk="";
+    let chunk = ''
     req.on('data', data => {
       chunk += data
     })
@@ -39,24 +38,31 @@ http.createServer(async (req, res) => {
     deleteFolderRecursive(projectDir)
 
     // 拉取仓库最新代码
-    execSync(`git clone https://github.com/RongXiaoCong/${data.repository.name}.git ${projectDir}`, {stdio: 'inherit'})
+    execSync(`git clone https://github.com/yeyan1996/${data.repository.name}.git ${projectDir}`, {
+      stdio: 'inherit',
+    })
 
-    // 复制Dockerfile到项目里
+    // 复制 Dockerfile 到项目目录
     fs.copyFileSync(path.resolve(`./Dockerfile`), path.resolve(projectDir, './Dockerfile'))
 
-    // 复制.dockerignore到项目里
+    // 复制 .dockerignore 到项目目录
     fs.copyFileSync(path.resolve(__dirname, `./.dockerignore`), path.resolve(projectDir, './.dockerignore'))
 
-    // 复制docker镜像
-    execSync(`docker build . -t ${data.repository.name}-image:latest`, {stdio: 'inherit', cwd: projectDir})
+    // 创建 docker 镜像
+    execSync(`docker build . -t ${data.repository.name}-image:latest `, {
+      stdio: 'inherit',
+      cwd: projectDir
+    })
 
-    // 销毁docker容器
-    execSync(`docker ps -a -f "name=^${data.repository.name}-container" --format="{{.Names}}" | xargs -r docker stop | xargs -r docker rm`,
-      {stdio: 'inherit'})
+    // 销毁 docker 容器
+    execSync(`docker ps -a -f "name=^${data.repository.name}-container" --format="{{.Names}}" | xargs -r docker stop | xargs -r docker rm`, {
+      stdio: 'inherit',
+    })
 
-    // 创建docker容器
-    execSync(`docker run -d -p 8888:80 --name${data.repository.name}-container ${data.repository.name}-image:latest`,
-      {stdio: 'inherit'})
+    // 创建 docker 容器
+    execSync(`docker run -d -p 8888:80 --name ${data.repository.name}-container  ${data.repository.name}-image:latest`, {
+      stdio: 'inherit',
+    })
 
     console.log('deploy success')
     res.end('ok')
