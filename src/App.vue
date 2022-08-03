@@ -1,6 +1,6 @@
 <template>
   <div id="app">
-    <div>hello docker7</div>
+    <div>hello docker6</div>
     <img src="./assets/logo.png">
     <router-view/>
   </div>
